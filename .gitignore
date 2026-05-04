@@ -1,4 +1,7 @@
 data/raw/
-data/processed/
+# data/processed/
 .env
 venv/
+__pycache__/
+.DS_Store
+.gitkeep

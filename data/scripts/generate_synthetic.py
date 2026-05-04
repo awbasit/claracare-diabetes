@@ -14,19 +14,20 @@ SYN = ROOT / "data" / "processed" / "synthetic.jsonl"
 MODEL = "gpt-4o-mini"
 
 SYSTEM = (
-    "You are generating training data for a health literacy assistant that\n"
-    "helps Type 2 diabetes patients in Ghana understand their condition.\n"
-    "Generate ONE patient question and a clear, simple answer.\n"
+    "You are generating training data for a health literacy assistant "
+    "that helps Type 2 diabetes patients in Ghana understand their condition.\n"
+    "You will be given a topic. Generate:\n"
+    "  1. A realistic question a diabetes patient in Ghana would ask about that topic.\n"
+    "  2. A clear, simple answer a health worker would give.\n"
     "Rules for the answer:\n"
+    "- Minimum 40 words\n"
     "- Maximum grade 7 reading level\n"
     "- Short sentences (under 15 words each)\n"
     "- No jargon without plain-language explanation\n"
     "- Warm, direct tone\n"
     "- Never give specific drug dosages\n"
     "- Always recommend seeing a doctor for personal medical decisions\n"
-    "Return ONLY valid JSON. No preamble. No markdown fences.\n"
-    "Schema: {instruction: str, input: str, output: str, topic: str, source: str}\n"
-    'Set input to empty string. Set source to "synthetic".'
+    "Return ONLY valid JSON. No preamble. No markdown fences."
 )
 
 TOPICS = [
@@ -93,13 +94,30 @@ TOPICS = [
 ]
 
 
-def chk(row, topic_expected):
-    need = {"instruction", "input", "output", "topic", "source"}
-    assert isinstance(row, dict) and set(row.keys()) >= need
+def normalize_response(raw, topic):
+    instruction = raw.get("patient_question") or raw.get("instruction", "")
+    output = raw.get("answer") or raw.get("output", "")
+    return {
+        "instruction": str(instruction).strip(),
+        "input": "",
+        "output": str(output).strip(),
+        "topic": topic,
+        "source": "synthetic",
+    }
+
+
+def chk(row):
+    assert len(row["instruction"].split()) >= 5, (
+        f"instruction too short: {row['instruction']!r}"
+    )
+    assert not row["instruction"].lower().startswith("generate"), (
+        f"instruction is a meta-command: {row['instruction']!r}"
+    )
+    assert len(row["output"].split()) >= 40, (
+        f"output too short ({len(row['output'].split())} words)"
+    )
     assert row["source"] == "synthetic"
     assert row["input"] == ""
-    assert row["topic"] == topic_expected
-    assert len(row["output"].split()) >= 30
 
 
 def dump(path, mode, rows):
@@ -111,48 +129,63 @@ def dump(path, mode, rows):
 def main():
     api_key = os.getenv("OPENAI_API_KEY")
     assert api_key, "Set OPENAI_API_KEY"
-    assert len(TOPICS) == 60, "Must be 60 sprint topics"
-    assert len(TOPICS) <= 150
+    assert len(TOPICS) == 60
 
+    cli = OpenAI(api_key=api_key)
     SYN.parent.mkdir(parents=True, exist_ok=True)
     SYN.unlink(missing_ok=True)
     buf = []
     did_write = False
-    for topic in TOPICS:
-        try:
-            cli = OpenAI(api_key=api_key)
-
-            response = cli.chat.completions.create(
-                model=MODEL,
-                temperature=0.9,
-                max_tokens=500,
-                messages=[
-                    {"role": "system", "content": SYSTEM},
-                    {
-                        "role": "user",
-                        "content": (
-                            'Return one JSON object with keys "instruction", '
-                            '"input", "output", "topic", "source". Topic must '
-                            "exactly match: "
-                            + json.dumps(topic)
-                        ),
-                    },
-                ],
-            )
-
-            blk = response.choices[0].message.content
-            row = json.loads(blk.strip())
-            chk(row, topic)
-            buf.append(row)
-            if len(buf) >= 10:
-                dump(SYN, "a" if did_write else "w", buf)
-                did_write = True
-                buf.clear()
-        except Exception as e:
-            print(f"skipped {topic[:48]!r}... {e!r}")
+    skipped = 0
+    print("Generating synthetic data...")
+    REPEATS_PER_TOPIC = 5  # gives 60 * 5 = 300 records
+    for i, topic in enumerate(TOPICS):
+        for rep in range(REPEATS_PER_TOPIC):
+            try:
+                response = cli.chat.completions.create(
+                    model=MODEL,
+                    temperature=0.9,
+                    max_tokens=500,
+                    messages=[
+                        {"role": "system", "content": SYSTEM},
+                        {
+                            "role": "user",
+                            "content": (
+                                "Topic: " + json.dumps(topic) + "\n\n"
+                                "Return a JSON object with exactly these fields:\n"
+                                "  patient_question: a full question sentence ending in ?\n"
+                                "  input: empty string\n"
+                                "  answer: your simple answer (minimum 40 words)\n"
+                                "  topic: exactly " + json.dumps(topic) + "\n"
+                                "  source: exactly \"synthetic\"\n"
+                                "Return only the JSON object. No explanation. No markdown."
+                            ),
+                        },
+                    ],
+                )
+                blk = response.choices[0].message.content.strip()
+                blk = blk.removeprefix("```json").removeprefix("```")
+                blk = blk.removesuffix("```").strip()
+                raw = json.loads(blk)
+                row = normalize_response(raw, topic)
+                chk(row)
+                buf.append(row)
+                print(f"  [{i+1}/{len(TOPICS)}] ok: {topic[:50]!r}")
+                if len(buf) >= 10:
+                    dump(SYN, "a" if did_write else "w", buf)
+                    did_write = True
+                    buf.clear()
+            except Exception as e:
+                skipped += 1
+                print(f"  [{i+1}/{len(TOPICS)}] skipped {topic[:50]!r}: {e!r}")
+            print(f"  [{i+1}/{len(TOPICS)}] rep {rep+1}: {topic[:40]!r}")
         time.sleep(0.5)
     if buf:
         dump(SYN, "a" if did_write else "w", buf)
+    total = len(TOPICS) - skipped
+    print(f"\ndone: {total} written, {skipped} skipped -> {SYN}")
+    if total < 50:
+        print("WARNING: under 50 records. Check skipped topics above and rerun.")
 
 
 if __name__ == "__main__":
