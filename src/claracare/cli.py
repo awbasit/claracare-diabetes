@@ -4,7 +4,17 @@ from argparse import ArgumentParser
 
 def run_step(step: str) -> None:
     """Execute one pipeline step or all steps."""
-    assert step in {"collect", "clean", "synthetic", "format", "all"}, f"Unknown step: {step}"
+    assert step in {
+        "collect",
+        "clean",
+        "synthetic",
+        "format",
+        "expand",
+        "integrate_hf",
+        "merge",
+        "audit",
+        "all",
+    }, f"Unknown step: {step}"
     if step == "collect":
         from data.scripts.collect import main as collect_main
 
@@ -25,6 +35,26 @@ def run_step(step: str) -> None:
 
         format_main()
         return
+    if step == "expand":
+        from data.scripts.build_expanded_dataset import main as expand_main
+
+        expand_main()
+        return
+    if step == "integrate_hf":
+        from data.scripts.integrate_hf_diabetes import main as integrate_hf_main
+
+        integrate_hf_main()
+        return
+    if step == "merge":
+        from data.scripts.merge_datasets import main as merge_main
+
+        merge_main()
+        return
+    if step == "audit":
+        from data.scripts.audit_samples import main as audit_main
+
+        audit_main()
+        return
     from data.scripts.collect import main as collect_main
     from data.scripts.clean import main as clean_main
     from data.scripts.generate_synthetic import main as synthetic_main
@@ -41,7 +71,17 @@ def main() -> None:
     parser = ArgumentParser(prog="claracare", description="Run ClaraCare data pipeline steps.")
     parser.add_argument(
         "step",
-        choices=["collect", "clean", "synthetic", "format", "all"],
+        choices=[
+            "collect",
+            "clean",
+            "synthetic",
+            "format",
+            "expand",
+            "integrate_hf",
+            "merge",
+            "audit",
+            "all",
+        ],
         help="Pipeline step to run.",
     )
     args = parser.parse_args()

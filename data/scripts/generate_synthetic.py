@@ -133,19 +133,25 @@ def main():
 
     cli = OpenAI(api_key=api_key)
     SYN.parent.mkdir(parents=True, exist_ok=True)
-    SYN.unlink(missing_ok=True)
+    overwrite_existing = os.getenv("SYNTHETIC_OVERWRITE", "1").strip() == "1"
+    if overwrite_existing:
+        SYN.unlink(missing_ok=True)
     buf = []
     did_write = False
     skipped = 0
     print("Generating synthetic data...")
-    REPEATS_PER_TOPIC = 5  # gives 60 * 5 = 300 records
+    repeats_per_topic = int(os.getenv("SYNTHETIC_REPEATS_PER_TOPIC", "5"))
+    assert repeats_per_topic > 0, "SYNTHETIC_REPEATS_PER_TOPIC must be > 0"
+    temperature = float(os.getenv("SYNTHETIC_TEMPERATURE", "0.9"))
+    max_tokens = int(os.getenv("SYNTHETIC_MAX_TOKENS", "500"))
+    rows_written = 0
     for i, topic in enumerate(TOPICS):
-        for rep in range(REPEATS_PER_TOPIC):
+        for rep in range(repeats_per_topic):
             try:
                 response = cli.chat.completions.create(
                     model=MODEL,
-                    temperature=0.9,
-                    max_tokens=500,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                     messages=[
                         {"role": "system", "content": SYSTEM},
                         {
@@ -170,6 +176,7 @@ def main():
                 row = normalize_response(raw, topic)
                 chk(row)
                 buf.append(row)
+                rows_written += 1
                 print(f"  [{i+1}/{len(TOPICS)}] ok: {topic[:50]!r}")
                 if len(buf) >= 10:
                     dump(SYN, "a" if did_write else "w", buf)
@@ -182,9 +189,8 @@ def main():
         time.sleep(0.5)
     if buf:
         dump(SYN, "a" if did_write else "w", buf)
-    total = len(TOPICS) - skipped
-    print(f"\ndone: {total} written, {skipped} skipped -> {SYN}")
-    if total < 50:
+    print(f"\ndone: {rows_written} written, {skipped} skipped -> {SYN}")
+    if rows_written < 50:
         print("WARNING: under 50 records. Check skipped topics above and rerun.")
 
 

@@ -4,7 +4,36 @@ import jsonlines
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data/raw"
 OUT = ROOT / "data/processed/cleaned_real.jsonl"
-KEYWORDS = ["diabetes", "blood sugar", "glucose", "insulin", "hba1c", "metformin", "type 2", "hyperglycemia", "hypoglycemia", "glycemic", "a1c", "diabetic"]
+CORE_QUESTION_TERMS = [
+    "diabetes",
+    "diabetic",
+    "type 2",
+    "blood sugar",
+    "glucose",
+    "hba1c",
+    "a1c",
+    "metformin",
+    "insulin",
+    "hypoglycemia",
+    "hyperglycemia",
+]
+BAD_TERMS = [
+    "pregnancy",
+    "vaginal",
+    "penis",
+    "erection",
+    "condom",
+    "birth control",
+    "pacemaker",
+    "bypass",
+    "aspirin",
+    "heart surgery",
+    "fungal",
+    "discharge",
+    "migraine",
+    "vertigo",
+]
+KEYWORDS = CORE_QUESTION_TERMS + ["glycemic"]
 JARGON = ["etiology", "pathophysiology", "comorbidity", "contraindicated", "titration", "pharmacokinetics", "endocrinologist recommends", "differential diagnosis", "serum creatinine"]
 FAIL_PREFIX = ["patient presents", "patient is a", "case report", "chief complaint:", "history of present illness", "56-year-old", "55-year-old", "54-year-old", "53-year-old", "52-year-old", "51-year-old", "50-year-old", "45-year-old", "40-year-old", "35-year-old", "30-year-old", "65-year-old", "70-year-old", "60-year-old"]
 PASS_PREFIX = ("how", "what", "why", "when", "can", "should", "is ", "are ", "do ", "does ", "will ", "my ", "i ")
@@ -32,6 +61,18 @@ def normalize(row):
         return None
 
 
+def is_diabetes_focused(record):
+    instruction = record["instruction"].lower()
+    output = record["output"].lower()
+    full_text = instruction + " " + output
+
+    question_is_diabetes_related = any(t in instruction for t in CORE_QUESTION_TERMS)
+    has_bad_topic = any(t in full_text for t in BAD_TERMS)
+    answer_long_enough = len(output.split()) >= 40
+
+    return question_is_diabetes_related and not has_bad_topic and answer_long_enough
+
+
 def main():
     assert RAW.exists() and RAW.is_dir(), "data/raw directory not found"
     files = sorted(RAW.glob("*.jsonl"))
@@ -50,12 +91,9 @@ def main():
                     rows.append(rec)
     after_normalize = len(rows)
     print("after_normalize:", after_normalize)
-    rows = [x for x in rows if any(k in (x["instruction"] + " " + x["output"]).lower() for k in KEYWORDS)]
-    after_keyword = len(rows)
-    print("after_keyword:", after_keyword)
-    rows = [x for x in rows if len(x["output"].split()) >= 40]
-    after_length = len(rows)
-    print("after_length:", after_length)
+    rows = [x for x in rows if is_diabetes_focused(x)]
+    after_strict_focus = len(rows)
+    print("after_strict_focus:", after_strict_focus)
     rows = [x for x in rows if sum(1 for t in JARGON if t in x["output"].lower()) < 2]
     after_clinical_filter = len(rows)
     print("after_clinical_filter:", after_clinical_filter)
@@ -99,8 +137,7 @@ def main():
     print("rows_read:", rows_read)
     print("skipped_unmapped:", skipped_unmapped)
     print("after_normalize:", after_normalize)
-    print("after_keyword:", after_keyword)
-    print("after_length:", after_length)
+    print("after_strict_focus:", after_strict_focus)
     print("after_clinical_filter:", after_clinical_filter)
     print("after_patient_voice:", after_patient_voice)
     print("after_dedupe:", after_dedupe)
