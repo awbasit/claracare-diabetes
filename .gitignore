@@ -5,3 +5,9 @@ venv/
 __pycache__/
 .DS_Store
 .gitkeep
+data/processed/claracare_eval.jsonl
+data/processed/claracare_train.jsonl
+data/processed/hf_diabetes_clean.jsonl
+data/processed/synthetic.jsonl
+data/reports/token_length_stats.json
+data/reports/hf_integration_stats.json
