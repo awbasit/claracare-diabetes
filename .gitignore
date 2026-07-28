@@ -1,13 +1,29 @@
-data/raw/
-# data/processed/
-.env
-venv/
+# Python
 __pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env files
+.env
+.env.local
+*.env.local
+
+# Node / frontend
+node_modules/
+dist/
+frontend/dist/
+.vite/
+
+# IDE / OS
 .DS_Store
-.gitkeep
-data/processed/claracare_eval.jsonl
-data/processed/claracare_train.jsonl
-data/processed/hf_diabetes_clean.jsonl
-data/processed/synthetic.jsonl
-data/reports/token_length_stats.json
-data/reports/hf_integration_stats.json
+.idea/
+.vscode/
+
+# Docker
+postgres-data/
+.env.example

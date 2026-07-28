@@ -1,6 +1,0 @@
-openai
-jsonlines
-datasets
-tqdm
-python-dotenv
-ipykernel

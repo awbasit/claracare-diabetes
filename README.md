@@ -1,110 +1,97 @@
-# ClaraCare Diabetes Dataset + Training Pipeline
+# DiaWise AI
 
-ClaraCare is a diabetes health-literacy project focused on simple, safe explanations for patients in Ghana.
+Monorepo scaffold: FastAPI backend + React (Vite) frontend, Postgres with pgvector.
 
-This repository contains:
-- data collection and curation scripts
-- synthetic data generation scripts
-- dataset formatting scripts for train/eval splits
-- a Colab notebook for Sprint 2 (`SFT -> DPO`) fine-tuning
-- reusable utility functions used by the notebook
-- a minimal CLI entrypoint for pipeline steps
+This is scaffolding only — no business logic is implemented yet.
 
-## Repository Structure
+## Structure
 
 ```text
-claracare-diabetes/
-├─ run.py
-├─ src/
-│  └─ claracare/
-│     ├─ __init__.py
-│     └─ cli.py
-├─ data/
-│  ├─ __init__.py
-│  └─ scripts/
-│     ├─ __init__.py
-│     ├─ collect.py
-│     ├─ clean.py
-│     ├─ generate_synthetic.py
-│     └─ format_dataset.py
-├─ notebooks/
-│  ├─ claracare_sprint2_sft_dpo.ipynb
-│  └─ README.md
-├─ util/
-│  ├─ __init__.py
-│  ├─ prompting.py
-│  ├─ data_ops.py
-│  ├─ model_ops.py
-│  └─ validation.py
-└─ .gitignore
+backend/    FastAPI app (SQLAlchemy 2.0 async, Alembic, JWT auth utils)
+frontend/   Vite + React + TypeScript, Tailwind, shadcn/ui, react-router-dom
+docker-compose.yml
 ```
 
-## Data Pipeline (Sprint 1)
+## Prerequisites
 
-Run from the repository root using the new CLI launcher:
+- Docker + Docker Compose
+- Node.js 20+ (for local frontend dev outside Docker)
+- Python 3.11+ (for local backend dev outside Docker)
 
-1) Collect raw public datasets
+## Quick start (Docker)
+
+1. Copy the root env file and adjust as needed:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Bring up Postgres (with pgvector) and the backend:
+
+   ```bash
+   docker-compose up --build
+   ```
+
+   This starts:
+   - `postgres` — `pgvector/pgvector:pg16`, with the `vector` extension enabled via `docker/init-pgvector.sql`, data persisted in the `postgres_data` named volume.
+   - `backend` — FastAPI app on http://localhost:8000, auto-reloading on code changes.
+
+3. Verify the backend is up:
+
+   ```bash
+   curl http://localhost:8000/health
+   curl http://localhost:8000/doctor
+   ```
+
+## Database migrations (Alembic)
+
+With the stack running:
+
 ```bash
-python run.py collect
+docker-compose exec backend alembic upgrade head
 ```
 
-2) Clean and normalize to patient-friendly rows
+Or locally against a running Postgres:
+
 ```bash
-python run.py clean
+cd backend
+alembic upgrade head
 ```
 
-3) Generate synthetic Ghana-focused rows
+To create a new migration after adding/changing SQLAlchemy models:
+
 ```bash
-python run.py synthetic
+alembic revision --autogenerate -m "describe the change"
 ```
 
-4) Build train/eval files
+## Backend — local dev without Docker
+
 ```bash
-python run.py format
+cd backend
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
+cp .env.example .env          # then set DATABASE_URL to a reachable Postgres
+uvicorn app.main:app --reload
 ```
 
-Run all steps in order:
+Run tests:
+
 ```bash
-python run.py all
+pytest
 ```
 
-Expected outputs:
-- `data/processed/cleaned_real.jsonl`
-- `data/processed/synthetic.jsonl`
-- `data/processed/claracare_train.jsonl`
-- `data/processed/claracare_eval.jsonl`
+## Frontend — local dev
 
-## Training Pipeline (Sprint 2)
+```bash
+cd frontend
+npm install
+cp .env.example .env          # set VITE_API_BASE_URL if not using the default
+npm run dev
+```
 
-Use:
-- `notebooks/claracare_sprint2_sft_dpo.ipynb`
+The dev server runs on http://localhost:5173 and talks to the backend via `VITE_API_BASE_URL` (see `src/services/api.ts`).
 
-The notebook performs:
-- baseline inference with base Mistral
-- SFT with QLoRA
-- SFT adapter merge
-- paired generations for preference data
-- preference pair creation via GPT-4o-mini judging
-- DPO training on top of SFT model
-- DPO adapter merge
-- final qualitative comparison
-- final deliverables validation cell
+## Environment variables
 
-Notebook details are documented in `notebooks/README.md`.
-
-## Path and Import Assumptions
-
-- Script output paths in `data/scripts/*.py` are rooted via:
-  - `ROOT = Path(__file__).resolve().parents[2]`
-- `run.py` injects `src/` into `sys.path`, then dispatches to `claracare.cli`
-- `claracare.cli` imports `data.scripts.*` via package markers in `data/` and `data/scripts/`
-- Notebook utility imports resolve by searching upward for a `util/` folder in Cell 2.
-- Colab checkpoint root is fixed to:
-  - `/content/drive/MyDrive/claracare-checkpoints`
-
-## Restructure Applied
-
-The repo now has a lightweight package/CLI layer without rewriting working scripts:
-- keeps existing script logic unchanged
-- adds a stable command surface (`python run.py <step>`)
-- preserves path behavior for local and Colab execution
+See `.env.example` (root, for docker-compose), `backend/.env.example`, and `frontend/.env.example` for the full list of variables and their defaults.
