@@ -26,8 +26,8 @@ async def get_current_user(
         raise credentials_exception
     try:
         payload = decode_token(credentials.credentials)
-    except JWTError:
-        raise credentials_exception
+    except JWTError as err:
+        raise credentials_exception from err
     if payload.get("type") != "access":
         raise credentials_exception
     user = await service.get_user_by_subject(db, payload.get("sub"))

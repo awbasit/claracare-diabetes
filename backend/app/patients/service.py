@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -49,7 +49,9 @@ async def upsert_medical_history(
 
 
 async def get_lifestyle_profile(db: AsyncSession, patient_id: uuid.UUID) -> LifestyleProfile | None:
-    result = await db.execute(select(LifestyleProfile).where(LifestyleProfile.patient_id == patient_id))
+    result = await db.execute(
+        select(LifestyleProfile).where(LifestyleProfile.patient_id == patient_id)
+    )
     return result.scalar_one_or_none()
 
 
@@ -83,12 +85,16 @@ async def get_own_medication(
     db: AsyncSession, patient_id: uuid.UUID, medication_id: uuid.UUID
 ) -> Medication | None:
     result = await db.execute(
-        select(Medication).where(Medication.id == medication_id, Medication.patient_id == patient_id)
+        select(Medication).where(
+            Medication.id == medication_id, Medication.patient_id == patient_id
+        )
     )
     return result.scalar_one_or_none()
 
 
-async def create_medication(db: AsyncSession, patient_id: uuid.UUID, data: dict[str, Any]) -> Medication:
+async def create_medication(
+    db: AsyncSession, patient_id: uuid.UUID, data: dict[str, Any]
+) -> Medication:
     medication = Medication(patient_id=patient_id, **data)
     db.add(medication)
     await db.commit()
@@ -113,7 +119,9 @@ async def deactivate_medication(db: AsyncSession, medication: Medication) -> Med
     return medication
 
 
-async def get_baseline_assessment(db: AsyncSession, patient_id: uuid.UUID) -> BaselineAssessment | None:
+async def get_baseline_assessment(
+    db: AsyncSession, patient_id: uuid.UUID
+) -> BaselineAssessment | None:
     result = await db.execute(
         select(BaselineAssessment).where(BaselineAssessment.patient_id == patient_id)
     )
@@ -124,7 +132,7 @@ async def submit_baseline_assessment(
     db: AsyncSession, patient_id: uuid.UUID, notes: str | None, raw_answers: dict[str, Any]
 ) -> BaselineAssessment:
     assessment = await get_baseline_assessment(db, patient_id)
-    completed_at = datetime.now(timezone.utc)
+    completed_at = datetime.now(UTC)
     if assessment is None:
         assessment = BaselineAssessment(
             patient_id=patient_id, notes=notes, raw_answers=raw_answers, completed_at=completed_at

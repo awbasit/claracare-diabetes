@@ -37,7 +37,9 @@ async def get_profile(
     medications = await service.list_medications(db, patient.id, active_only=True)
     return PatientProfileRead(
         patient=PatientRead.model_validate(patient),
-        medical_history=MedicalHistoryRead.model_validate(medical_history) if medical_history else None,
+        medical_history=MedicalHistoryRead.model_validate(medical_history)
+        if medical_history
+        else None,
         lifestyle_profile=(
             LifestyleProfileRead.model_validate(lifestyle_profile) if lifestyle_profile else None
         ),
@@ -55,14 +57,42 @@ async def update_profile(
     return PatientRead.model_validate(updated)
 
 
+@router.get("/medical-history", response_model=MedicalHistoryRead)
+async def get_medical_history(
+    patient: Patient = Depends(get_current_patient),
+    db: AsyncSession = Depends(get_db),
+) -> MedicalHistoryRead:
+    history = await service.get_medical_history(db, patient.id)
+    if history is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Medical history not found"
+        )
+    return MedicalHistoryRead.model_validate(history)
+
+
 @router.put("/medical-history", response_model=MedicalHistoryRead)
 async def upsert_medical_history(
     payload: MedicalHistoryUpdate,
     patient: Patient = Depends(get_current_patient),
     db: AsyncSession = Depends(get_db),
 ) -> MedicalHistoryRead:
-    history = await service.upsert_medical_history(db, patient.id, payload.model_dump(exclude_unset=True))
+    history = await service.upsert_medical_history(
+        db, patient.id, payload.model_dump(exclude_unset=True)
+    )
     return MedicalHistoryRead.model_validate(history)
+
+
+@router.get("/lifestyle", response_model=LifestyleProfileRead)
+async def get_lifestyle(
+    patient: Patient = Depends(get_current_patient),
+    db: AsyncSession = Depends(get_db),
+) -> LifestyleProfileRead:
+    profile = await service.get_lifestyle_profile(db, patient.id)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Lifestyle profile not found"
+        )
+    return LifestyleProfileRead.model_validate(profile)
 
 
 @router.put("/lifestyle", response_model=LifestyleProfileRead)
@@ -79,10 +109,11 @@ async def upsert_lifestyle(
 
 @router.get("/medications", response_model=list[MedicationRead])
 async def list_medications(
+    include_inactive: bool = False,
     patient: Patient = Depends(get_current_patient),
     db: AsyncSession = Depends(get_db),
 ) -> list[MedicationRead]:
-    medications = await service.list_medications(db, patient.id)
+    medications = await service.list_medications(db, patient.id, active_only=not include_inactive)
     return [MedicationRead.model_validate(m) for m in medications]
 
 
@@ -104,7 +135,9 @@ async def update_medication(
     db: AsyncSession = Depends(get_db),
 ) -> MedicationRead:
     medication = await _get_owned_medication_or_404(db, patient, medication_id)
-    updated = await service.update_medication(db, medication, payload.model_dump(exclude_unset=True))
+    updated = await service.update_medication(
+        db, medication, payload.model_dump(exclude_unset=True)
+    )
     return MedicationRead.model_validate(updated)
 
 
@@ -118,8 +151,23 @@ async def delete_medication(
     await service.deactivate_medication(db, medication)
 
 
+@router.get("/baseline-assessment", response_model=BaselineAssessmentRead)
+async def get_baseline_assessment(
+    patient: Patient = Depends(get_current_patient),
+    db: AsyncSession = Depends(get_db),
+) -> BaselineAssessmentRead:
+    assessment = await service.get_baseline_assessment(db, patient.id)
+    if assessment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Baseline assessment not found"
+        )
+    return BaselineAssessmentRead.model_validate(assessment)
+
+
 @router.post(
-    "/baseline-assessment", response_model=BaselineAssessmentRead, status_code=status.HTTP_201_CREATED
+    "/baseline-assessment",
+    response_model=BaselineAssessmentRead,
+    status_code=status.HTTP_201_CREATED,
 )
 async def submit_baseline_assessment(
     payload: BaselineAssessmentSubmit,

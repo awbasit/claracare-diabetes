@@ -81,7 +81,9 @@ async def test_me_with_expired_token_rejected(client: AsyncClient) -> None:
     user_id = register.json()["user"]["id"]
     expired_token = create_token(user_id, "access", timedelta(minutes=-1))
 
-    response = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {expired_token}"})
+    response = await client.get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {expired_token}"}
+    )
     assert response.status_code == 401
 
 

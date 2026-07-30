@@ -70,15 +70,37 @@ alembic revision --autogenerate -m "describe the change"
 cd backend
 python -m venv .venv
 .venv\Scripts\activate        # Windows
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime deps + pytest/ruff/mypy
 cp .env.example .env          # then set DATABASE_URL to a reachable Postgres
 uvicorn app.main:app --reload
 ```
+
+`requirements.txt` is runtime-only; `requirements-dev.txt` layers test and lint
+tooling on top (mirrors the frontend's `dependencies`/`devDependencies` split).
 
 Run tests:
 
 ```bash
 pytest
+```
+
+### Linting and type-checking
+
+```bash
+ruff check .           # lint
+ruff format --check .  # formatting
+mypy app/               # type-check
+```
+
+Config for both lives in `backend/pyproject.toml`. From the repo root, the
+same checks are also available via:
+
+```bash
+make lint          # ruff check
+make format-check   # ruff format --check
+make typecheck      # mypy app/
+make check          # all three
+make test           # pytest, via the running docker-compose backend service
 ```
 
 ## Frontend — local dev

@@ -16,7 +16,12 @@ from app.schemas.medical_history import (
     MedicalHistoryRead,
     MedicalHistoryUpdate,
 )
-from app.schemas.medication import MedicationBase, MedicationCreate, MedicationRead, MedicationUpdate
+from app.schemas.medication import (
+    MedicationBase,
+    MedicationCreate,
+    MedicationRead,
+    MedicationUpdate,
+)
 from app.schemas.patient import PatientBase, PatientCreate, PatientRead, PatientUpdate
 from app.schemas.user import UserBase, UserCreate, UserRead, UserUpdate
 

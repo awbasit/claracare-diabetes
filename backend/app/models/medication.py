@@ -18,7 +18,10 @@ class Medication(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "medications"
 
     patient_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     dosage: Mapped[str | None] = mapped_column(String(100))

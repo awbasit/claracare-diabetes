@@ -159,12 +159,37 @@ async def test_medication_crud_and_soft_delete(client: AsyncClient) -> None:
     assert deleted.status_code == 204
 
     listed_after = await client.get("/api/patients/me/medications", headers=auth_headers(token))
-    body = listed_after.json()
-    assert len(body) == 1
-    assert body[0]["is_active"] is False
+    assert listed_after.json() == []
 
     profile = await client.get("/api/patients/me/profile", headers=auth_headers(token))
     assert profile.json()["medications"] == []
+
+
+async def test_medications_include_inactive_query_param(client: AsyncClient) -> None:
+    reg = await register_patient(client, "meds-inactive@example.com")
+    token = reg["tokens"]["access_token"]
+
+    create = await client.post(
+        "/api/patients/me/medications",
+        json={"name": "Metformin", "dosage": "500mg", "frequency": "twice daily"},
+        headers=auth_headers(token),
+    )
+    medication_id = create.json()["id"]
+
+    await client.delete(
+        f"/api/patients/me/medications/{medication_id}", headers=auth_headers(token)
+    )
+
+    default_list = await client.get("/api/patients/me/medications", headers=auth_headers(token))
+    assert default_list.json() == []
+
+    with_inactive = await client.get(
+        "/api/patients/me/medications?include_inactive=true", headers=auth_headers(token)
+    )
+    body = with_inactive.json()
+    assert len(body) == 1
+    assert body[0]["id"] == medication_id
+    assert body[0]["is_active"] is False
 
 
 async def test_missing_medication_returns_404(client: AsyncClient) -> None:
@@ -272,3 +297,110 @@ async def test_cross_patient_medical_history_isolation(client: AsyncClient) -> N
 
     response = await client.get("/api/patients/me/profile", headers=auth_headers(token_b))
     assert response.json()["medical_history"] is None
+
+
+async def test_get_medical_history_404_then_200(client: AsyncClient) -> None:
+    reg = await register_patient(client, "mh-standalone@example.com")
+    token = reg["tokens"]["access_token"]
+
+    missing = await client.get("/api/patients/me/medical-history", headers=auth_headers(token))
+    assert missing.status_code == 404
+
+    await client.put(
+        "/api/patients/me/medical-history",
+        json={"diabetes_type": "type2", "years_since_diagnosis": 3},
+        headers=auth_headers(token),
+    )
+
+    found = await client.get("/api/patients/me/medical-history", headers=auth_headers(token))
+    assert found.status_code == 200
+    assert found.json()["diabetes_type"] == "type2"
+    assert found.json()["years_since_diagnosis"] == 3
+
+
+async def test_get_medical_history_cross_patient_isolation(client: AsyncClient) -> None:
+    patient_a = await register_patient(client, "mh-standalone-A@example.com")
+    token_a = patient_a["tokens"]["access_token"]
+    await client.put(
+        "/api/patients/me/medical-history",
+        json={"diabetes_type": "type1"},
+        headers=auth_headers(token_a),
+    )
+
+    patient_b = await register_patient(client, "mh-standalone-B@example.com")
+    token_b = patient_b["tokens"]["access_token"]
+
+    response = await client.get("/api/patients/me/medical-history", headers=auth_headers(token_b))
+    assert response.status_code == 404
+
+
+async def test_get_lifestyle_404_then_200(client: AsyncClient) -> None:
+    reg = await register_patient(client, "lifestyle-standalone@example.com")
+    token = reg["tokens"]["access_token"]
+
+    missing = await client.get("/api/patients/me/lifestyle", headers=auth_headers(token))
+    assert missing.status_code == 404
+
+    await client.put(
+        "/api/patients/me/lifestyle",
+        json={"sleep_hours_avg": 6.5, "stress_level_baseline": 7},
+        headers=auth_headers(token),
+    )
+
+    found = await client.get("/api/patients/me/lifestyle", headers=auth_headers(token))
+    assert found.status_code == 200
+    assert found.json()["sleep_hours_avg"] == 6.5
+    assert found.json()["stress_level_baseline"] == 7
+
+
+async def test_get_lifestyle_cross_patient_isolation(client: AsyncClient) -> None:
+    patient_a = await register_patient(client, "lifestyle-standalone-A@example.com")
+    token_a = patient_a["tokens"]["access_token"]
+    await client.put(
+        "/api/patients/me/lifestyle",
+        json={"sleep_hours_avg": 8},
+        headers=auth_headers(token_a),
+    )
+
+    patient_b = await register_patient(client, "lifestyle-standalone-B@example.com")
+    token_b = patient_b["tokens"]["access_token"]
+
+    response = await client.get("/api/patients/me/lifestyle", headers=auth_headers(token_b))
+    assert response.status_code == 404
+
+
+async def test_get_baseline_assessment_404_then_200(client: AsyncClient) -> None:
+    reg = await register_patient(client, "baseline-standalone@example.com")
+    token = reg["tokens"]["access_token"]
+
+    missing = await client.get("/api/patients/me/baseline-assessment", headers=auth_headers(token))
+    assert missing.status_code == 404
+
+    await client.post(
+        "/api/patients/me/baseline-assessment",
+        json={"notes": "first pass", "raw_answers": {"q1": "yes"}},
+        headers=auth_headers(token),
+    )
+
+    found = await client.get("/api/patients/me/baseline-assessment", headers=auth_headers(token))
+    assert found.status_code == 200
+    assert found.json()["notes"] == "first pass"
+    assert found.json()["raw_answers"] == {"q1": "yes"}
+
+
+async def test_get_baseline_assessment_cross_patient_isolation(client: AsyncClient) -> None:
+    patient_a = await register_patient(client, "baseline-standalone-A@example.com")
+    token_a = patient_a["tokens"]["access_token"]
+    await client.post(
+        "/api/patients/me/baseline-assessment",
+        json={"notes": "confidential", "raw_answers": {}},
+        headers=auth_headers(token_a),
+    )
+
+    patient_b = await register_patient(client, "baseline-standalone-B@example.com")
+    token_b = patient_b["tokens"]["access_token"]
+
+    response = await client.get(
+        "/api/patients/me/baseline-assessment", headers=auth_headers(token_b)
+    )
+    assert response.status_code == 404

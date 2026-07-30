@@ -19,7 +19,10 @@ class MedicalHistory(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "medical_histories"
 
     patient_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     diabetes_type: Mapped[DiabetesType | None] = mapped_column(
         Enum(DiabetesType, name="diabetes_type")

@@ -18,12 +18,16 @@ class LifestyleProfile(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "lifestyle_profiles"
     __table_args__ = (
         CheckConstraint(
-            "stress_level_baseline BETWEEN 1 AND 10", name="ck_lifestyle_profiles_stress_level_range"
+            "stress_level_baseline BETWEEN 1 AND 10",
+            name="ck_lifestyle_profiles_stress_level_range",
         ),
     )
 
     patient_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     sleep_hours_avg: Mapped[float | None] = mapped_column(Float)
     exercise_frequency: Mapped[str | None] = mapped_column(String(100))

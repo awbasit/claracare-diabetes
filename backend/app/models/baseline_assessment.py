@@ -19,7 +19,10 @@ class BaselineAssessment(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "baseline_assessments"
 
     patient_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(Text)

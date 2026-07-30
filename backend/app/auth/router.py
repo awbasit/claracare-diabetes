@@ -21,12 +21,18 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> RegisterResponse:
+async def register(
+    payload: RegisterRequest, db: AsyncSession = Depends(get_db)
+) -> RegisterResponse:
     existing = await service.get_user_by_email(db, payload.email)
     if existing is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        )
 
-    user = await service.create_user(db, email=payload.email, password=payload.password, role=payload.role)
+    user = await service.create_user(
+        db, email=payload.email, password=payload.password, role=payload.role
+    )
     return RegisterResponse(
         user=UserRead.model_validate(user),
         tokens=Token(
@@ -40,7 +46,9 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token:
     user = await service.authenticate_user(db, payload.email, payload.password)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password"
+        )
 
     return Token(
         access_token=create_access_token(str(user.id)),
@@ -49,14 +57,16 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)
-async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> AccessTokenResponse:
+async def refresh(
+    payload: RefreshRequest, db: AsyncSession = Depends(get_db)
+) -> AccessTokenResponse:
     invalid_refresh = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
     )
     try:
         token_payload = decode_token(payload.refresh_token)
-    except JWTError:
-        raise invalid_refresh
+    except JWTError as err:
+        raise invalid_refresh from err
 
     if token_payload.get("type") != "refresh":
         raise invalid_refresh
