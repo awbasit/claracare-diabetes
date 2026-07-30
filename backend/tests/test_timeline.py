@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,14 +9,14 @@ from tests.test_patients import auth_headers, register_patient
 
 
 async def _create_glucose(
-    client: AsyncClient, token: str, event_timestamp: str, value: float = 100
+    client: AsyncClient, token: str, event_timestamp: str, value: float = 100, unit: str = "mg_dl"
 ) -> None:
     response = await client.post(
         "/api/patients/me/glucose",
         json={
             "event_timestamp": event_timestamp,
             "value": value,
-            "unit": "mg_dl",
+            "unit": unit,
             "reading_type": "fasting",
         },
         headers=auth_headers(token),
@@ -355,7 +356,9 @@ async def test_timeline_summary_rollup_math(client: AsyncClient) -> None:
     assert body["medications_missed"] == 1
     assert body["latest_glucose"]["value"] == 140
     assert body["latest_glucose_timestamp"] == "2026-04-01T20:00:00Z"
+    assert body["glucose_average_mg_dl"] == 120.0
     assert body["total_exercise_minutes"] == 50
+    assert body["average_stress_level"] == 5.0
 
 
 async def test_timeline_summary_empty_day(client: AsyncClient) -> None:
@@ -374,8 +377,33 @@ async def test_timeline_summary_empty_day(client: AsyncClient) -> None:
     assert body["medications_missed"] == 0
     assert body["latest_glucose"] is None
     assert body["latest_glucose_timestamp"] is None
+    assert body["glucose_average_mg_dl"] is None
     assert body["total_exercise_minutes"] == 0
+    assert body["average_stress_level"] is None
     assert all(count == 0 for count in body["event_counts"].values())
+
+
+async def test_timeline_summary_glucose_average_normalizes_units(client: AsyncClient) -> None:
+    reg = await register_patient(client, "timeline-summary-units@example.com")
+    token = reg["tokens"]["access_token"]
+
+    await _create_glucose(client, token, "2026-04-05T08:00:00Z", value=100, unit="mg_dl")
+    await _create_glucose(client, token, "2026-04-05T20:00:00Z", value=10, unit="mmol_l")
+
+    response = await client.get(
+        "/api/patients/me/timeline/summary",
+        params={"date": "2026-04-05"},
+        headers=auth_headers(token),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    # 10 mmol/L -> ~180.2 mg/dL; average of (100, 180.2) -> ~140.1 mg/dL. If the
+    # two units were averaged without normalizing first, this would be very
+    # different (e.g. naively averaging 100 and 10 gives 55).
+    assert body["glucose_average_mg_dl"] == pytest.approx(140.1, abs=0.1)
+    # The "latest" reading keeps its original stored unit/value, not normalized.
+    assert body["latest_glucose"]["value"] == 10
+    assert body["latest_glucose"]["unit"] == "mmol_l"
 
 
 async def test_timeline_summary_cross_patient_isolation(client: AsyncClient) -> None:

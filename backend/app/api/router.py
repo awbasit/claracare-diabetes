@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.auth.router import router as auth_router
+from app.health_events.analytics.router import router as analytics_router
 from app.health_events.exercise.router import router as exercise_router
 from app.health_events.glucose.router import router as glucose_router
 from app.health_events.meals.router import router as meals_router
@@ -25,6 +26,7 @@ api_router.include_router(stress_router)
 api_router.include_router(symptoms_router)
 api_router.include_router(vitals_router)
 api_router.include_router(timeline_router)
+api_router.include_router(analytics_router)
 
 
 @api_router.get("/doctor")

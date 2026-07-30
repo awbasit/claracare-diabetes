@@ -236,4 +236,6 @@ class DailySummary(BaseModel):
     medications_missed: int
     latest_glucose: GlucoseDetail | None
     latest_glucose_timestamp: datetime | None
+    glucose_average_mg_dl: float | None
     total_exercise_minutes: int
+    average_stress_level: float | None
