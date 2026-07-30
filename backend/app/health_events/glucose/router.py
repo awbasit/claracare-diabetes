@@ -61,7 +61,7 @@ async def list_glucose_readings(
     events = await health_event_service.get_events(
         db,
         patient.id,
-        event_type=EventType.glucose,
+        event_types=[EventType.glucose],
         start=start,
         end=end,
         limit=limit,

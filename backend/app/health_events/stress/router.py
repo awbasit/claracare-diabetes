@@ -61,7 +61,7 @@ async def list_stress_logs(
     events = await health_event_service.get_events(
         db,
         patient.id,
-        event_type=EventType.stress,
+        event_types=[EventType.stress],
         start=start,
         end=end,
         limit=limit,

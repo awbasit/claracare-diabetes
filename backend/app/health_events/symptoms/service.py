@@ -18,11 +18,19 @@ class SymptomLogService:
         await db.flush()
         return log
 
-    async def get_detail(self, db: AsyncSession, health_event_id: uuid.UUID) -> SymptomLog | None:
+    async def get_details_for_events(
+        self, db: AsyncSession, health_event_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, SymptomLog]:
+        if not health_event_ids:
+            return {}
         result = await db.execute(
-            select(SymptomLog).where(SymptomLog.health_event_id == health_event_id)
+            select(SymptomLog).where(SymptomLog.health_event_id.in_(health_event_ids))
         )
-        return result.scalar_one_or_none()
+        return {log.health_event_id: log for log in result.scalars().all()}
+
+    async def get_detail(self, db: AsyncSession, health_event_id: uuid.UUID) -> SymptomLog | None:
+        details = await self.get_details_for_events(db, [health_event_id])
+        return details.get(health_event_id)
 
     async def update_detail(
         self, db: AsyncSession, health_event_id: uuid.UUID, updates: dict[str, Any]

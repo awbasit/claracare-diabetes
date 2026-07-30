@@ -61,7 +61,13 @@ async def list_sleep_logs(
     db: AsyncSession = Depends(get_db),
 ) -> list[SleepLogRead]:
     events = await health_event_service.get_events(
-        db, patient.id, event_type=EventType.sleep, start=start, end=end, limit=limit, offset=offset
+        db,
+        patient.id,
+        event_types=[EventType.sleep],
+        start=start,
+        end=end,
+        limit=limit,
+        offset=offset,
     )
     return [SleepLogRead.from_event_and_detail(event, detail) for event, detail in events]
 

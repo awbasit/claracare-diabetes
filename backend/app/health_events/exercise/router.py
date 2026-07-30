@@ -69,7 +69,7 @@ async def list_exercise_logs(
     events = await health_event_service.get_events(
         db,
         patient.id,
-        event_type=EventType.exercise,
+        event_types=[EventType.exercise],
         start=start,
         end=end,
         limit=limit,

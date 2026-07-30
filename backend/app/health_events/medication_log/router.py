@@ -82,7 +82,7 @@ async def list_medication_logs(
     events = await health_event_service.get_events(
         db,
         patient.id,
-        event_type=EventType.medication,
+        event_types=[EventType.medication],
         start=start,
         end=end,
         limit=limit,

@@ -69,7 +69,13 @@ async def list_meal_logs(
     db: AsyncSession = Depends(get_db),
 ) -> list[MealLogRead]:
     events = await health_event_service.get_events(
-        db, patient.id, event_type=EventType.meal, start=start, end=end, limit=limit, offset=offset
+        db,
+        patient.id,
+        event_types=[EventType.meal],
+        start=start,
+        end=end,
+        limit=limit,
+        offset=offset,
     )
     return [MealLogRead.from_event_and_detail(event, detail) for event, detail in events]
 

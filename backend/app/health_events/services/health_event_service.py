@@ -1,4 +1,5 @@
 import uuid
+from collections import defaultdict
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -22,6 +23,10 @@ class EventDetailService(Protocol):
     ) -> Any: ...
 
     async def get_detail(self, db: AsyncSession, health_event_id: uuid.UUID) -> Any | None: ...
+
+    async def get_details_for_events(
+        self, db: AsyncSession, health_event_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, Any]: ...
 
     async def update_detail(
         self, db: AsyncSession, health_event_id: uuid.UUID, updates: dict[str, Any]
@@ -73,6 +78,30 @@ async def get_event_detail(db: AsyncSession, event: HealthEvent) -> Any:
     return await detail_service.get_detail(db, event.id)
 
 
+async def _attach_details(
+    db: AsyncSession, events: list[HealthEvent]
+) -> list[tuple[HealthEvent, Any]]:
+    """Attach each event's detail row, batched by type.
+
+    Each event type has its own detail table, so this can't be one SQL join
+    across all of them — but grouping by type and issuing one
+    `WHERE health_event_id IN (...)` query per type keeps the query count
+    bounded by the number of distinct types in `events` (at most 8), rather
+    than growing with len(events) the way a per-event lookup would.
+    """
+    events_by_type: dict[EventType, list[HealthEvent]] = defaultdict(list)
+    for event in events:
+        events_by_type[event.event_type].append(event)
+
+    details_by_id: dict[uuid.UUID, Any] = {}
+    for event_type, type_events in events_by_type.items():
+        detail_service = _resolve_detail_service(event_type)
+        event_ids = [event.id for event in type_events]
+        details_by_id.update(await detail_service.get_details_for_events(db, event_ids))
+
+    return [(event, details_by_id.get(event.id)) for event in events]
+
+
 async def create_event(
     db: AsyncSession,
     *,
@@ -106,15 +135,21 @@ async def get_events(
     db: AsyncSession,
     patient_id: uuid.UUID,
     *,
-    event_type: EventType | None = None,
+    event_types: list[EventType] | None = None,
     start: datetime | None = None,
     end: datetime | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[tuple[HealthEvent, Any]]:
+    """List events for a patient, optionally scoped to a subset of types.
+
+    event_types=None means "all types" — used by the unified timeline.
+    Individual per-type endpoints (glucose, meals, ...) pass a single-item
+    list so this one function serves both without a per-type call.
+    """
     stmt = select(HealthEvent).where(HealthEvent.patient_id == patient_id)
-    if event_type is not None:
-        stmt = stmt.where(HealthEvent.event_type == event_type)
+    if event_types is not None:
+        stmt = stmt.where(HealthEvent.event_type.in_(event_types))
     if start is not None:
         stmt = stmt.where(HealthEvent.event_timestamp >= start)
     if end is not None:
@@ -124,15 +159,7 @@ async def get_events(
     result = await db.execute(stmt)
     events = list(result.scalars().all())
 
-    # Each event type has its own detail table, so this can't be a single SQL
-    # join across types — fetch each event's detail row through its
-    # registered service instead (fine at Sprint 2 scale with one event type
-    # live; worth revisiting if/when this needs to scale to large timelines).
-    events_with_details: list[tuple[HealthEvent, Any]] = []
-    for event in events:
-        detail = await get_event_detail(db, event)
-        events_with_details.append((event, detail))
-    return events_with_details
+    return await _attach_details(db, events)
 
 
 async def update_event(
