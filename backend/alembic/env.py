@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import get_settings
 from app.database.base import Base
+from app.health_events.models import *  # noqa: F401,F403 — registers HealthEvent/GlucoseLog
 from app.models import *  # noqa: F401,F403 — registers all models on Base.metadata
 
 config = context.config

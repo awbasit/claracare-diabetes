@@ -27,3 +27,4 @@ frontend/dist/
 # Docker
 postgres-data/
 .env.example
+backend/alembic/versions/80fd3bca907d_add_health_events_and_glucose_logs_.py
