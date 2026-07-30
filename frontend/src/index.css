@@ -24,9 +24,21 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
 
-  /* Chart colors (see dataviz skill palette) — glucose trend line + band */
-  --chart-glucose-line: #2a78d6;
+  /* Chart colors (see dataviz skill palette) — categorical slots 1-8,
+     one hue per event type, assigned in fixed order and reused across
+     light/dark rather than cycled. */
+  --chart-glucose-line: #2a78d6; /* slot 1 blue */
   --chart-glucose-band: #9ec5f4;
+  --chart-meals: #eb6834; /* slot 2 orange */
+  --chart-medication: #1baf7a; /* slot 3 aqua */
+  --chart-exercise: #eda100; /* slot 4 yellow */
+  --chart-sleep: #e87ba4; /* slot 5 magenta */
+  --chart-stress-level: #008300; /* slot 6 green */
+  --chart-stress-energy: #7bc47b;
+  --chart-symptoms: #4a3aa7; /* slot 7 violet */
+  --chart-vitals-weight: #e34948; /* slot 8 red */
+  --chart-vitals-systolic: #e34948;
+  --chart-vitals-diastolic: #f0a5a4;
 }
 
 .dark {
@@ -51,6 +63,16 @@
 
   --chart-glucose-line: #3987e5;
   --chart-glucose-band: #184f95;
+  --chart-meals: #d95926;
+  --chart-medication: #199e70;
+  --chart-exercise: #c98500;
+  --chart-sleep: #d55181;
+  --chart-stress-level: #008300;
+  --chart-stress-energy: #4d9a4d;
+  --chart-symptoms: #9085e9;
+  --chart-vitals-weight: #e66767;
+  --chart-vitals-systolic: #e66767;
+  --chart-vitals-diastolic: #a34443;
 }
 
 @theme inline {

@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react"
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import * as analyticsService from "@/services/analyticsService"
-import type { GlucoseTrendResponse, TrendPeriod } from "@/types/timeline"
+import type { DailyGlucoseTrendPoint, TrendPeriod } from "@/types/timeline"
 
 interface ChartPoint {
   date: string
@@ -24,10 +21,10 @@ function formatAxisDate(dateStr: string, period: TrendPeriod): string {
   return date.toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" })
 }
 
-function buildChartData(response: GlucoseTrendResponse): ChartPoint[] {
-  return response.points.map((point) => ({
+function buildChartData(points: DailyGlucoseTrendPoint[], period: TrendPeriod): ChartPoint[] {
+  return points.map((point) => ({
     date: point.date,
-    dateLabel: formatAxisDate(point.date, response.period),
+    dateLabel: formatAxisDate(point.date, period),
     average: point.average,
     minimum: point.minimum,
     maximum: point.maximum,
@@ -59,65 +56,24 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   )
 }
 
-export function GlucoseTrendChart() {
-  const [period, setPeriod] = useState<TrendPeriod>("week")
-  const [data, setData] = useState<GlucoseTrendResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface GlucoseTrendChartProps {
+  period: TrendPeriod
+  points: DailyGlucoseTrendPoint[]
+}
 
-  useEffect(() => {
-    let isMounted = true
-    setIsLoading(true)
-    setError(null)
-    analyticsService
-      .getGlucoseTrend(period)
-      .then((response) => {
-        if (isMounted) setData(response)
-      })
-      .catch(() => {
-        if (isMounted) setError("Couldn't load glucose trend.")
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false)
-      })
-    return () => {
-      isMounted = false
-    }
-  }, [period])
-
-  const chartData = data ? buildChartData(data) : []
+export function GlucoseTrendChart({ period, points }: GlucoseTrendChartProps) {
+  const chartData = buildChartData(points, period)
   const hasAnyReadings = chartData.some((point) => point.count > 0)
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
+      <CardHeader className="pb-2">
         <CardTitle className="text-base">Glucose trend</CardTitle>
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant={period === "week" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setPeriod("week")}
-          >
-            Week
-          </Button>
-          <Button
-            type="button"
-            variant={period === "month" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setPeriod("month")}
-          >
-            Month
-          </Button>
-        </div>
       </CardHeader>
       <CardContent>
-        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        {!isLoading && !error && !hasAnyReadings && (
+        {!hasAnyReadings ? (
           <p className="text-sm text-muted-foreground">No glucose readings in this period yet.</p>
-        )}
-        {!isLoading && !error && hasAnyReadings && (
+        ) : (
           <>
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/features/auth/AuthContext"
 import { DashboardCards } from "@/features/dashboard/DashboardCards"
-import { GlucoseTrendChart } from "@/features/dashboard/GlucoseTrendChart"
+import { TrendsSection } from "@/features/dashboard/TrendsSection"
 import * as patientsService from "@/services/patientsService"
 import type { PatientProfile } from "@/types/patient"
 
@@ -74,7 +74,7 @@ export function DashboardPage() {
 
       <DashboardCards />
 
-      <GlucoseTrendChart />
+      <TrendsSection />
     </div>
   )
 }
