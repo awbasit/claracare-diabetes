@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 60
+    JWT_ACCESS_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_EXPIRE_MINUTES: int = 60 * 24 * 7
 
     CORS_ORIGINS: str = "http://localhost:5173"
 

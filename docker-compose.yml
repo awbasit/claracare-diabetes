@@ -23,7 +23,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-diawise}:${POSTGRES_PASSWORD:-diawise}@postgres:5432/${POSTGRES_DB:-diawise}
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-random-secret}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
+      JWT_ACCESS_EXPIRE_MINUTES: ${JWT_ACCESS_EXPIRE_MINUTES:-30}
+      JWT_REFRESH_EXPIRE_MINUTES: ${JWT_REFRESH_EXPIRE_MINUTES:-10080}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "8000:8000"
