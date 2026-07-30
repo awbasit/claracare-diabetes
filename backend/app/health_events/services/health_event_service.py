@@ -53,6 +53,21 @@ async def get_own_event(
     return result.scalar_one_or_none()
 
 
+async def get_own_event_of_type(
+    db: AsyncSession, patient_id: uuid.UUID, event_id: uuid.UUID, event_type: EventType
+) -> HealthEvent | None:
+    """Like get_own_event, but also requires the event to be of the given type.
+
+    Used by each type's router so e.g. a glucose reading's id can't be looked
+    up through the meals endpoint — the underlying query doesn't filter by
+    type, since get_own_event is shared across all event types.
+    """
+    event = await get_own_event(db, patient_id, event_id)
+    if event is None or event.event_type != event_type:
+        return None
+    return event
+
+
 async def get_event_detail(db: AsyncSession, event: HealthEvent) -> Any:
     detail_service = _resolve_detail_service(event.event_type)
     return await detail_service.get_detail(db, event.id)

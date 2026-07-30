@@ -204,15 +204,22 @@ async def test_create_event_with_unregistered_event_type_fails_without_orphan(
 ) -> None:
     patient_id = uuid.uuid4()
 
-    with pytest.raises(ValueError, match="No detail service registered"):
-        await health_event_service.create_event(
-            db_session,
-            patient_id=patient_id,
-            event_type=EventType.meal,  # valid enum member, but no detail service registered yet
-            event_timestamp=datetime.now(UTC),
-            notes=None,
-            detail_data={},
-        )
+    # Every EventType member now has a registered detail service (Prompt 2
+    # filled in the rest), so there's no naturally-unregistered type left to
+    # exercise this path with. Simulate one by briefly un-registering glucose.
+    saved_service = health_event_service._detail_services.pop(EventType.glucose)
+    try:
+        with pytest.raises(ValueError, match="No detail service registered"):
+            await health_event_service.create_event(
+                db_session,
+                patient_id=patient_id,
+                event_type=EventType.glucose,
+                event_timestamp=datetime.now(UTC),
+                notes=None,
+                detail_data={},
+            )
+    finally:
+        health_event_service._detail_services[EventType.glucose] = saved_service
 
     result = await db_session.execute(
         select(HealthEvent).where(HealthEvent.patient_id == patient_id)

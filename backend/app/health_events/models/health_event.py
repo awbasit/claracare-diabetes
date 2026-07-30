@@ -13,7 +13,14 @@ from app.health_events.models.enums import EventSource, EventType
 from app.models.base import TimestampMixin, UUIDPKMixin
 
 if TYPE_CHECKING:
+    from app.health_events.models.exercise_log import ExerciseLog
     from app.health_events.models.glucose_log import GlucoseLog
+    from app.health_events.models.meal_log import MealLog
+    from app.health_events.models.medication_log import MedicationLog
+    from app.health_events.models.sleep_log import SleepLog
+    from app.health_events.models.stress_log import StressLog
+    from app.health_events.models.symptom_log import SymptomLog
+    from app.health_events.models.vitals_log import VitalsLog
 
 
 class HealthEvent(UUIDPKMixin, TimestampMixin, Base):
@@ -42,6 +49,48 @@ class HealthEvent(UUIDPKMixin, TimestampMixin, Base):
     )
 
     glucose_log: Mapped[GlucoseLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    meal_log: Mapped[MealLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    medication_log: Mapped[MedicationLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    exercise_log: Mapped[ExerciseLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    sleep_log: Mapped[SleepLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    stress_log: Mapped[StressLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    symptom_log: Mapped[SymptomLog | None] = relationship(
+        back_populates="health_event",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    vitals_log: Mapped[VitalsLog | None] = relationship(
         back_populates="health_event",
         uselist=False,
         cascade="all, delete-orphan",
