@@ -33,6 +33,12 @@ async def create_user(
 ) -> User:
     user = User(email=email, hashed_password=hash_password(password), role=role)
     db.add(user)
+    await db.flush()
+
+    if role == UserRole.patient:
+        # Patient-role accounts need a Patient row to exist so get_current_patient can resolve one.
+        db.add(Patient(user_id=user.id))
+
     await db.commit()
     await db.refresh(user)
     return user
