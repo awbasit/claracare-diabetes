@@ -17,6 +17,15 @@ from app.clinical_reasoning.schemas.data_quality import (
     DataQualityReport,
 )
 from app.clinical_reasoning.schemas.findings import Contradiction, EvidenceRef, MissingInformation
+from app.clinical_reasoning.schemas.live_queries import (
+    LatestVitalsSummary,
+    MealEntry,
+    MedicationAdherenceSummary,
+    RecentMealsSummary,
+    RecentSymptomsSummary,
+    SleepSummary,
+    TodayGlucoseSummary,
+)
 from app.clinical_reasoning.schemas.observation import Observation
 
 __all__ = [
@@ -30,12 +39,19 @@ __all__ = [
     "DiabetesHistorySummary",
     "EvidenceRef",
     "GlucoseReading",
+    "LatestVitalsSummary",
     "LifestyleSummary",
+    "MealEntry",
+    "MedicationAdherenceSummary",
     "MedicationSummary",
     "MissingInformation",
     "Observation",
     "PatientContext",
     "PatientGoal",
+    "RecentMealsSummary",
+    "RecentSymptomsSummary",
+    "SleepSummary",
     "SymptomSummary",
     "TimelineSummary",
+    "TodayGlucoseSummary",
 ]

@@ -30,3 +30,4 @@ postgres-data/
 backend/alembic/versions/80fd3bca907d_add_health_events_and_glucose_logs_.py
 backend/alembic/versions/c635c8402bd6_add_meal_medication_exercise_sleep_.py
 backend/alembic/versions/797fb6a60d47_add_clinical_reasoning_patient_goals_.py
+backend/alembic/versions/9acf9bb510a6_sprint3_interview_sessions.py

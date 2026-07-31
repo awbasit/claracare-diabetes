@@ -9,6 +9,7 @@ from app.clinical_reasoning.models import *  # noqa: F401,F403 — registers Pat
 from app.core.config import get_settings
 from app.database.base import Base
 from app.health_events.models import *  # noqa: F401,F403 — registers HealthEvent/GlucoseLog
+from app.interview.models import *  # noqa: F401,F403 — registers InterviewSession
 from app.models import *  # noqa: F401,F403 — registers all models on Base.metadata
 
 config = context.config
