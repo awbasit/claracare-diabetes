@@ -13,6 +13,7 @@ from app.models.base import TimestampMixin, UUIDPKMixin
 
 if TYPE_CHECKING:
     from app.health_events.models.health_event import HealthEvent
+    from app.models.medication import Medication
 
 
 class MedicationLog(UUIDPKMixin, TimestampMixin, Base):
@@ -36,3 +37,8 @@ class MedicationLog(UUIDPKMixin, TimestampMixin, Base):
     missed_reason: Mapped[str | None] = mapped_column(Text)
 
     health_event: Mapped[HealthEvent] = relationship(back_populates="medication_log")
+    # One-directional — no back_populates on Medication. Added for the
+    # Clinical Reasoning Evidence Builder (§3.1), which needs the medication
+    # name to render e.g. "Missed Metformin, Wednesday" and would otherwise
+    # only have the bare medication_id FK to work with.
+    medication: Mapped[Medication] = relationship()
